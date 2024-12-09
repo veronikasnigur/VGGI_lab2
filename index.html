@@ -6,12 +6,64 @@
     <style>
         body {
             background-color: #EEEEEE;
+            font-family: Arial, sans-serif;
         }
         .controls {
             margin-top: 20px;
+            padding: 10px;
+            background-color: #FFFFFF;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            display: inline-block;
         }
         #canvas-holder {
             margin-top: 20px;
+            text-align: center;
+        }
+        label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 200px;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            transition: background 0.3s;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #FFFFFF;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
         }
     </style>
 
@@ -24,26 +76,30 @@
 </head>
 <body onload="init()">
 
-<h2>A Cube with "Trackball" Mouse Rotation</h2>
+<h2>A Conical surface with "Trackball" Mouse Rotation</h2>
 
-<p id="message">Drag your mouse on the cube to rotate it.<br>
+<p id="message">Drag your mouse on the figure to rotate it.<br>
 (On a touch screen, you can use your finger.)</p>
 
 <div id="canvas-holder">
     <canvas width="800" height="800" id="webglcanvas" style="background-color:red"></canvas>
 </div>
 
-<!-- Додаємо повзунки для U та V -->
+<!-- Оновлені повзунки для U та V -->
 <div class="controls">
-    <label for="uSegments">U Segments: </label>
-    <input type="range" id="uSegments" min="3" max="100" value="60">
-    <span id="uSegmentsValue">60</span><br><br>
-
-    <label for="vSegments">V Segments: </label>
-    <input type="range" id="vSegments" min="3" max="100" value="20">
-    <span id="vSegmentsValue">20</span><br><br>
-
-    <button onclick="updateSurface()">Update Surface</button>
+    <div>
+        <label for="uSegments">U Segments:</label>
+        <input type="range" id="uSegments" min="3" max="100" value="60" oninput="updateSliderValue('uSegments')">
+        <span id="uSegmentsValue">60</span>
+    </div>
+    <div style="margin-top: 10px;">
+        <label for="vSegments">V Segments:</label>
+        <input type="range" id="vSegments" min="3" max="100" value="20" oninput="updateSliderValue('vSegments')">
+        <span id="vSegmentsValue">20</span>
+    </div>
+    <div style="margin-top: 20px; text-align: center;">
+        <button onclick="updateSurface()">Update Surface</button>
+    </div>
 </div>
 
 </body>

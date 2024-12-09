@@ -15,6 +15,10 @@ let vSegments = 20;  // Кількість сегментів по V
 function deg2rad(angle) {
     return angle * Math.PI / 180;
 }
+function updateSliderValue(id) {
+    const value = document.getElementById(id).value;
+    document.getElementById(`${id}Value`).textContent = value;
+}
 
 // Конструктор для шейдерної програми
 function ShaderProgram(program) {
