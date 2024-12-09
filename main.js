@@ -15,6 +15,7 @@ let vSegments = 20;  // Кількість сегментів по V
 function deg2rad(angle) {
     return angle * Math.PI / 180;
 }
+
 function updateSliderValue(id) {
     const value = document.getElementById(id).value;
     document.getElementById(`${id}Value`).textContent = value;
@@ -26,10 +27,26 @@ function ShaderProgram(program) {
     this.iAttribVertex = -1;
     this.iModelViewProjectionMatrix = -1;
     this.iColor = -1;
+    this.iLightPos = -1;
+    this.iLightColor = -1;
+    this.iAmbientColor = -1;
 
     this.Use = function() {
         gl.useProgram(this.prog);
     }
+}
+
+// Передача параметрів освітлення в шейдери
+function setLighting() {
+    // Параметри освітлення
+    let lightPos = [5.0, 5.0, 10.0]; // Ближче до фігури
+    let lightColor = [1.0, 1.0, 1.0]; // Біле світло
+    let ambientColor = [0.1, 0.1, 0.1]; // Тіньове освітлення (ambient)
+
+    // Відправляємо ці параметри в шейдери
+    gl.uniform3fv(shProgram.iLightPos, lightPos);
+    gl.uniform3fv(shProgram.iLightColor, lightColor);
+    gl.uniform3fv(shProgram.iAmbientColor, ambientColor);
 }
 
 // Ініціалізація WebGL
@@ -42,6 +59,9 @@ function initGL() {
     shProgram.iAttribVertex = gl.getAttribLocation(prog, "vertex");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iColor = gl.getUniformLocation(prog, "color");
+    shProgram.iLightPos = gl.getUniformLocation(prog, "lightPos");
+    shProgram.iLightColor = gl.getUniformLocation(prog, "lightColor");
+    shProgram.iAmbientColor = gl.getUniformLocation(prog, "ambientColor");
 
     surface = new Model(a, p, uSegments, vSegments);  // Створюємо об'єкт моделі з параметрами
     surface.BufferData();  // Заповнюємо буфери
@@ -61,6 +81,9 @@ function draw() {
     let modelViewProjection = m4.multiply(projection, matAccum);
 
     gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
+    
+    // Викликаємо setLighting для передачі параметрів освітлення
+    setLighting();
     
     // Малюємо заповнені трикутники (сірий)
     gl.uniform4fv(shProgram.iColor, [0.5, 0.5, 0.5, 1]); // Сірий
@@ -85,7 +108,6 @@ function updateSurface() {
     // Перемалювання поверхні після оновлення
     draw();
 }
-
 
 // Створення програми
 function createProgram(gl, vShader, fShader) {

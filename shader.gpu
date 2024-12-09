@@ -2,12 +2,21 @@
 
 // Vertex shader
 const vertexShaderSource = `
-attribute vec3 vertex;
-uniform mat4 ModelViewProjectionMatrix;
+attribute vec3 vertex; // Вершини
+attribute vec3 normal; // Нормалі для кожної вершини
+uniform mat4 ModelViewProjectionMatrix; // Модельно-перспективна матриця
+
+// Передаємо нормалі та координати фрагментному шейдеру
+varying vec3 fragNormal; 
+varying vec3 fragPosition;
 
 void main() {
-    gl_Position = ModelViewProjectionMatrix * vec4(vertex,1.0);
-}`;
+    fragNormal = normal; // Нормалі
+    fragPosition = vertex; // Позиції
+    gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0); // Перетворення у світові координати
+}
+`;
+
 
 
 // Fragment shader
@@ -18,7 +27,36 @@ const fragmentShaderSource = `
    precision mediump float;
 #endif
 
-uniform vec4 color;
+// Вхідні змінні з вершинного шейдера
+varying vec3 fragNormal;
+varying vec3 fragPosition;
+
+// Параметри освітлення
+uniform vec3 lightPos; // Позиція джерела світла
+uniform vec3 lightColor; // Колір джерела світла
+uniform vec3 ambientColor; // Колір ambient освітлення
+
+// Обчислення інтенсивності освітлення (Phong shading)
 void main() {
-    gl_FragColor = color;
-}`;
+    // 1. Ambient lighting
+    vec3 ambient = ambientColor;
+
+    // 2. Diffuse lighting
+    vec3 norm = normalize(fragNormal); 
+    vec3 lightDir = normalize(lightPos - fragPosition);
+    float diff = max(dot(norm, lightDir), 0.0); // Обчислюємо кути між нормаллю і напрямком світла
+    vec3 diffuse = diff * lightColor;
+
+    // 3. Specular lighting
+    vec3 viewDir = normalize(-fragPosition); // Вектор до глядача (0,0,1)
+    vec3 reflectDir = reflect(-lightDir, norm); // Відбитий вектор
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0); // Спекулярна складова (power control)
+    vec3 specular = spec * lightColor;
+
+    // Сума всіх компонент освітлення
+    vec3 lighting = ambient + diffuse + specular;
+
+    // Встановлюємо колір фрагмента
+    gl_FragColor = vec4(lighting, 1.0); // Вихідний колір
+}
+`;
