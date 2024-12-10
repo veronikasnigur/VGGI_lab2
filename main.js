@@ -41,7 +41,7 @@ function setLighting() {
     // Параметри освітлення
     let lightPos = [5.0, 5.0, 10.0]; // Ближче до фігури
     let lightColor = [1.0, 1.0, 1.0]; // Біле світло
-    let ambientColor = [0.3, 0.3, 0.3]; // Тіньове освітлення (ambient)
+    let ambientColor = [0.6, 0.6, 0.6]; // Тіньове освітлення (ambient)
 
     // Відправляємо ці параметри в шейдери
     gl.uniform3fv(shProgram.iLightPos, lightPos);
@@ -80,15 +80,22 @@ function draw() {
     let matAccum = m4.multiply(translateToPointZero, modelView);
     let modelViewProjection = m4.multiply(projection, matAccum);
 
+    // Передаємо модельно-видову-перспективну матрицю в шейдер
     gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
-    
-    // Викликаємо setLighting для передачі параметрів освітлення
+
+    // Передаємо параметри освітлення
     setLighting();
-    
-    // Малюємо заповнені трикутники (сірий)
-    gl.uniform4fv(shProgram.iColor, [0.5, 0.5, 0.5, 1]); // Сірий
-    surface.Draw(); // Викликаємо метод малювання з об'єкта моделі
+
+    // Підключення буфера нормалей
+    gl.bindBuffer(gl.ARRAY_BUFFER, surface.iFlatNormalBuffer);
+    gl.vertexAttribPointer(shProgram.iAttribFlatNormal, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(shProgram.iAttribFlatNormal);
+
+    // Малюємо поверхню
+    surface.Draw();
 }
+
+
 
 // Оновлення кількості сегментів по U та V
 function updateSurface() {

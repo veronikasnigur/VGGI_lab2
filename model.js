@@ -15,6 +15,7 @@ function Model(a, p, uSegments, vSegments) {
         let x = (this.a + v) * Math.cos(omega) * Math.cos(u);
         let y = (this.a + v) * Math.cos(omega) * Math.sin(u);
         let z = (this.a + v) * Math.sin(omega);
+        console.log(`u: ${u}, v: ${v} => x: ${x}, y: ${y}, z: ${z}`);  // Вивести координати кожної вершини
         return [x, y, z];
     };
 
@@ -34,25 +35,26 @@ function Model(a, p, uSegments, vSegments) {
     
             for (let j = 0; j <= vSteps; j++) {
                 let v = vMin + (vMax - vMin) * j / vSteps;
-    
                 let vertex = this.surfaceFunction(u, v);
                 vertices.push(...vertex);
             }
         }
     
-        // Генерація нормалей та індексів
+        // Генерація індексів та нормалей для Flat Shading
         for (let i = 0; i < uSteps; i++) {
             for (let j = 0; j < vSteps; j++) {
                 let idx = i * (vSteps + 1) + j;
                 let nextIdx = idx + vSteps + 1;
+                if (i < uSteps - 1 && j < vSteps - 1) {
+                    // Додаємо два трикутники для кожного квадрата
+                    indices.push(idx, idx + 1, nextIdx);      // Перший трикутник
+                    indices.push(idx + 1, nextIdx + 1, nextIdx);  // Другий трикутник
     
-                if (idx < vertices.length / 3 && nextIdx < vertices.length / 3) {
-                    // Отримання вершин трикутника
+                    // Отримання вершин для нормалей
                     let v0 = vertices.slice(idx * 3, idx * 3 + 3);
                     let v1 = vertices.slice((idx + 1) * 3, (idx + 1) * 3 + 3);
                     let v2 = vertices.slice(nextIdx * 3, nextIdx * 3 + 3);
     
-                    // Розрахунок нормалі граней
                     let edge1 = [
                         v1[0] - v0[0],
                         v1[1] - v0[1],
@@ -77,37 +79,65 @@ function Model(a, p, uSegments, vSegments) {
     
                     // Додаємо нормалі для Flat Shading
                     flatNormals.push(...normal, ...normal, ...normal);
-    
-                    // Індекси
-                    indices.push(idx, idx + 1, nextIdx);
                 }
             }
         }
     
+        // Додати замикання для кінця поверхні (закриття за u)
+        for (let j = 0; j < vSteps; j++) {
+            let idx1 = j;
+            let idx2 = j + 1;
+            let idx1NextRow = (uSteps) * (vSteps + 1) + j;
+            let idx2NextRow = (uSteps) * (vSteps + 1) + j + 1;
+    
+            indices.push(idx1, idx2, idx1NextRow);       // Трикутник для замикання
+            indices.push(idx2, idx2NextRow, idx1NextRow); // Трикутник для замикання
+        }
+    
+        // Додати замикання для кінця поверхні (закриття за v)
+        for (let i = 0; i < uSteps; i++) {
+            let idx1 = i * (vSteps + 1) + (vSteps);
+            let idx2 = (i + 1) * (vSteps + 1) + (vSteps);
+            let idx1NextRow = i * (vSteps + 1);
+            let idx2NextRow = (i + 1) * (vSteps + 1);
+    
+            indices.push(idx1, idx2, idx1NextRow);       // Трикутник для замикання
+            indices.push(idx2, idx2NextRow, idx1NextRow); // Трикутник для замикання
+        }
+    
         return { vertices, indices, flatNormals };
-    };    
+    };
+    
+    
 
     // Заповнення буферу WebGL
     this.BufferData = function() {
         let surfaceData = this.generateSurfaceData();
+    
+        // Буфер вершин
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(surfaceData.vertices), gl.STATIC_DRAW);
         this.count = surfaceData.vertices.length / 3;
-
+    
+        // Буфер індексів
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.iIndexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(surfaceData.indices), gl.STATIC_DRAW);
         this.countIndices = surfaceData.indices.length;
+    
+        // Буфер нормалей для Flat Shading
+        this.iFlatNormalBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iFlatNormalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(surfaceData.flatNormals), gl.STATIC_DRAW);
     };
-
-    // Малювання трикутників
     this.Draw = function() {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
-
+    
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.iIndexBuffer);
         gl.drawElements(gl.TRIANGLES, this.countIndices, gl.UNSIGNED_SHORT, 0);
     };
+    
 
     // Малювання ліній для U і V
     this.DrawLines = function() {
