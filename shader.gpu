@@ -1,5 +1,7 @@
 // Vertex shader
 const vertexShaderSource = `
+precision mediump float;  // Використовуємо середню точність для значень з плаваючою комою
+
 attribute vec3 vertex;          // Вершини поверхні
 attribute vec3 normal;          // Нормалі для кожної вершини
 uniform mat4 ModelViewProjectionMatrix;  // Модельно-видова-перспективна матриця
@@ -9,10 +11,12 @@ uniform vec3 ambientColor;      // Колір амбієнтного освіт�
 uniform vec3 cameraPos;         // Позиція камери
 varying vec3 fragColor;         // Колір, який передається у фрагментний шейдер
 varying vec3 fragNormal;        // Нормаль для обчислення освітлення
+varying vec3 fragPosition;      // Позиція поверхні для обчислення освітлення
 
 void main() {
     // Для Flat Shading, використовуємо одну нормаль для всієї грані:
     fragNormal = normalize(normal);  // Нормалізація нормалі для грані
+    fragPosition = vertex;           // Позиція вершини
 
     gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);  // Обчислення позиції вершини
 
@@ -33,11 +37,36 @@ const fragmentShaderSource = `
 precision mediump float;  // Використовуємо середню точність для значень з плаваючою комою
 varying vec3 fragColor;   // Отриманий колір з вершинного шейдера
 varying vec3 fragNormal;  // Нормаль для обчислення освітлення
+varying vec3 fragPosition; // Позиція для фрагментного шейдера
+
+uniform vec3 lightPos;    // Позиція джерела світла
+uniform vec3 lightColor;  // Колір джерела світла
+uniform vec3 ambientColor; // Колір амбієнтного освітлення
+uniform vec3 cameraPos;   // Позиція камери
 
 void main() {
-    // Використовуємо фіксований колір для всієї грані (Flat Shading)
-    gl_FragColor = vec4(fragColor, 1.0);  // Встановлюємо колір пікселя
+    // Нормалізація нормалей
+    vec3 normal = normalize(fragNormal);
+    vec3 lightDir = normalize(lightPos - fragPosition);  // Напрямок до джерела світла
+    vec3 viewDir = normalize(cameraPos - fragPosition);  // Напрямок до камери
+
+    // Розрахунок освітлення (додати ambient)
+    float diffuse = max(dot(normal, lightDir), 0.0);
+    vec3 diffuseColor = lightColor * diffuse;
+
+    // Амбієнтне освітлення
+    vec3 ambient = ambientColor * 0.1;
+
+    // Спекулярне освітлення
+    vec3 reflectDir = reflect(-lightDir, normal);  // Відбитий напрямок світла
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16.0);  // Спекулярний компонент
+    vec3 specularColor = lightColor * spec;
+
+    // Кольоровий результат
+    vec3 color = ambient + diffuseColor + specularColor;
+    gl_FragColor = vec4(color, 1.0);  // Встановлюємо колір пікселя
 }
+
 
 `;
 

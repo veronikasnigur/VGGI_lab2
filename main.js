@@ -38,9 +38,15 @@ function ShaderProgram(program) {
 }
 
 // Передача параметрів освітлення в шейдери
+let angle = 0.0;  // Кут обертання джерела світла
 function setLighting() {
     // Параметри освітлення
-    let lightPos = [5.0, 5.0, 5.0]; // Позиція джерела світла
+    let lightRadius = 5.0;  // Радіус орбіти джерела світла
+    let lightPos = [
+        lightRadius * Math.cos(angle),  // X-координата
+        5.0,  // Y-координата (постійна)
+        lightRadius * Math.sin(angle)   // Z-координата
+    ];
     let lightColor = [1.0, 1.0, 1.0]; // Біле світло
     let ambientColor = [0.2, 0.2, 0.2]; // Тіньове освітлення (ambient)
     
@@ -54,6 +60,20 @@ function setLighting() {
     gl.uniform3fv(shProgram.iCameraPos, cameraPos); // Додаємо відправку позиції камери
 }
 
+// Функція для анімації джерела світла
+function animate() {
+    angle += 0.01;  // Оновлення кута для обертання (можна змінити швидкість обертання)
+    if (angle > 2 * Math.PI) {
+        angle -= 2 * Math.PI;  // Обмежуємо кут, щоб він не ставав занадто великим
+    }
+
+    // Перемалювання поверхні
+    draw();
+
+    // Оновлюємо освітлення кожного кадру
+    setLighting();
+    requestAnimationFrame(animate);  // Анімація кадр за кадром
+}
 
 // Ініціалізація WebGL
 function initGL() {
@@ -164,5 +184,5 @@ function init() {
 
     initGL();
     spaceball = new TrackballRotator(canvas, draw, 0);
-    draw();
+    animate();  // Запускаємо анімацію
 }
