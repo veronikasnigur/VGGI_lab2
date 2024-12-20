@@ -1,62 +1,43 @@
-
-
 // Vertex shader
 const vertexShaderSource = `
-attribute vec3 vertex; // Вершини
-attribute vec3 normal; // Нормалі для кожної вершини
-uniform mat4 ModelViewProjectionMatrix; // Модельно-перспективна матриця
-
-// Передаємо нормалі та координати фрагментному шейдеру
-varying vec3 fragNormal; 
-varying vec3 fragPosition;
+attribute vec3 vertex;          // Вершини поверхні
+attribute vec3 normal;          // Нормалі для кожної вершини
+uniform mat4 ModelViewProjectionMatrix;  // Модельно-видова-перспективна матриця
+uniform vec3 lightPos;          // Позиція джерела світла
+uniform vec3 lightColor;        // Колір джерела світла
+uniform vec3 ambientColor;      // Колір амбієнтного освітлення
+uniform vec3 cameraPos;         // Позиція камери
+varying vec3 fragColor;         // Колір, який передається у фрагментний шейдер
+varying vec3 fragNormal;        // Нормаль для обчислення освітлення
 
 void main() {
-    fragNormal = normal; // Нормалі
-    fragPosition = vertex; // Позиції
-    gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0); // Перетворення у світові координати
-}
-`;
+    // Для Flat Shading, використовуємо одну нормаль для всієї грані:
+    fragNormal = normalize(normal);  // Нормалізація нормалі для грані
 
+    gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);  // Обчислення позиції вершини
+
+    // Обчислення освітлення для грані
+    vec3 lightDir = normalize(lightPos - vertex);
+    float diff = max(dot(fragNormal, lightDir), 0.0);
+    vec3 diffuse = diff * lightColor;
+    vec3 ambient = ambientColor;
+
+    fragColor = ambient + diffuse;  // Загальний колір поверхні
+}
+
+`;
 
 
 // Fragment shader
 const fragmentShaderSource = `
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-   precision highp float;
-#else
-   precision mediump float;
-#endif
+precision mediump float;  // Використовуємо середню точність для значень з плаваючою комою
+varying vec3 fragColor;   // Отриманий колір з вершинного шейдера
+varying vec3 fragNormal;  // Нормаль для обчислення освітлення
 
-// Вхідні змінні з вершинного шейдера
-varying vec3 fragNormal;
-varying vec3 fragPosition;
-
-// Параметри освітлення
-uniform vec3 lightPos; // Позиція джерела світла
-uniform vec3 lightColor; // Колір джерела світла
-uniform vec3 ambientColor; // Колір ambient освітлення
-
-// Обчислення інтенсивності освітлення (Phong shading)
 void main() {
-    // 1. Ambient lighting
-    vec3 ambient = ambientColor;
-
-    // 2. Diffuse lighting
-    vec3 norm = normalize(fragNormal); 
-    vec3 lightDir = normalize(lightPos - fragPosition);
-    float diff = max(dot(norm, lightDir), 0.0); // Обчислюємо кути між нормаллю і напрямком світла
-    vec3 diffuse = diff * lightColor;
-
-    // 3. Specular lighting
-    vec3 viewDir = normalize(-fragPosition); // Вектор до глядача (0,0,1)
-    vec3 reflectDir = reflect(-lightDir, norm); // Відбитий вектор
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0); // Спекулярна складова (power control)
-    vec3 specular = spec * lightColor;
-
-    // Сума всіх компонент освітлення
-    vec3 lighting = ambient + diffuse + specular;
-
-    // Встановлюємо колір фрагмента
-    gl_FragColor = vec4(lighting, 1.0); // Вихідний колір
+    // Використовуємо фіксований колір для всієї грані (Flat Shading)
+    gl_FragColor = vec4(fragColor, 1.0);  // Встановлюємо колір пікселя
 }
+
 `;
+

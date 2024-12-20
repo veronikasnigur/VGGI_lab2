@@ -30,6 +30,7 @@ function ShaderProgram(program) {
     this.iLightPos = -1;
     this.iLightColor = -1;
     this.iAmbientColor = -1;
+    this.iAttribFlatNormal = -1;  // Атрибут для нормалей
 
     this.Use = function() {
         gl.useProgram(this.prog);
@@ -39,29 +40,35 @@ function ShaderProgram(program) {
 // Передача параметрів освітлення в шейдери
 function setLighting() {
     // Параметри освітлення
-    let lightPos = [5.0, 5.0, 10.0]; // Ближче до фігури
+    let lightPos = [5.0, 5.0, 5.0]; // Позиція джерела світла
     let lightColor = [1.0, 1.0, 1.0]; // Біле світло
-    let ambientColor = [0.6, 0.6, 0.6]; // Тіньове освітлення (ambient)
+    let ambientColor = [0.2, 0.2, 0.2]; // Тіньове освітлення (ambient)
+    
+    // Позиція камери
+    let cameraPos = [0.0, 0.0, 10.0]; // Камера на певній відстані
 
     // Відправляємо ці параметри в шейдери
     gl.uniform3fv(shProgram.iLightPos, lightPos);
     gl.uniform3fv(shProgram.iLightColor, lightColor);
     gl.uniform3fv(shProgram.iAmbientColor, ambientColor);
+    gl.uniform3fv(shProgram.iCameraPos, cameraPos); // Додаємо відправку позиції камери
 }
+
 
 // Ініціалізація WebGL
 function initGL() {
     let prog = createProgram(gl, vertexShaderSource, fragmentShaderSource);
-
     shProgram = new ShaderProgram(prog);
     shProgram.Use();
 
+    // Отримуємо атрибути та uniform змінні
     shProgram.iAttribVertex = gl.getAttribLocation(prog, "vertex");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iColor = gl.getUniformLocation(prog, "color");
     shProgram.iLightPos = gl.getUniformLocation(prog, "lightPos");
     shProgram.iLightColor = gl.getUniformLocation(prog, "lightColor");
     shProgram.iAmbientColor = gl.getUniformLocation(prog, "ambientColor");
+    shProgram.iAttribFlatNormal = gl.getAttribLocation(prog, "normal");
 
     surface = new Model(a, p, uSegments, vSegments);  // Створюємо об'єкт моделі з параметрами
     surface.BufferData();  // Заповнюємо буфери
@@ -78,6 +85,7 @@ function draw() {
     let modelView = spaceball.getViewMatrix();
     let translateToPointZero = m4.translation(0, 0, -10);
     let matAccum = m4.multiply(translateToPointZero, modelView);
+
     let modelViewProjection = m4.multiply(projection, matAccum);
 
     // Передаємо модельно-видову-перспективну матрицю в шейдер
@@ -91,11 +99,14 @@ function draw() {
     gl.vertexAttribPointer(shProgram.iAttribFlatNormal, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(shProgram.iAttribFlatNormal);
 
+    // Підключення буфера вершин
+    gl.bindBuffer(gl.ARRAY_BUFFER, surface.iVertexBuffer);
+    gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(shProgram.iAttribVertex);
+
     // Малюємо поверхню
     surface.Draw();
 }
-
-
 
 // Оновлення кількості сегментів по U та V
 function updateSurface() {
