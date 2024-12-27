@@ -1,32 +1,31 @@
 // Vertex shader
 const vertexShaderSource = `
-precision mediump float;  // Використовуємо середню точність для значень з плаваючою комою
+precision mediump float;
 
-attribute vec3 vertex;          // Вершини поверхні
-attribute vec3 normal;          // Нормалі для кожної вершини
-uniform mat4 ModelViewProjectionMatrix;  // Модельно-видова-перспективна матриця
-uniform vec3 lightPos;          // Позиція джерела світла
-uniform vec3 lightColor;        // Колір джерела світла
-uniform vec3 ambientColor;      // Колір амбієнтного освітлення
-uniform vec3 cameraPos;         // Позиція камери
-varying vec3 fragColor;         // Колір, який передається у фрагментний шейдер
-varying vec3 fragNormal;        // Нормаль для обчислення освітлення
-varying vec3 fragPosition;      // Позиція поверхні для обчислення освітлення
+attribute vec3 vertex;          
+attribute vec3 normal;          
+uniform mat4 ModelViewProjectionMatrix;
+uniform vec3 lightPos;
+uniform vec3 lightColor;
+uniform vec3 ambientColor;
+uniform vec3 cameraPos;
+
+varying vec3 fragColor;
+varying vec3 fragNormal;
+varying vec3 fragPosition;
 
 void main() {
-    // Для Flat Shading, використовуємо одну нормаль для всієї грані:
-    fragNormal = normalize(normal);  // Нормалізація нормалі для грані
-    fragPosition = vertex;           // Позиція вершини
+    fragNormal = normalize(normal);
+    fragPosition = vec3(ModelViewProjectionMatrix * vec4(vertex, 1.0));
 
-    gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);  // Обчислення позиції вершини
+    gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);
 
-    // Обчислення освітлення для грані
-    vec3 lightDir = normalize(lightPos - vertex);
+    vec3 lightDir = normalize(lightPos - fragPosition);
     float diff = max(dot(fragNormal, lightDir), 0.0);
     vec3 diffuse = diff * lightColor;
     vec3 ambient = ambientColor;
 
-    fragColor = ambient + diffuse;  // Загальний колір поверхні
+    fragColor = ambient + diffuse;
 }
 
 `;
@@ -34,39 +33,35 @@ void main() {
 
 // Fragment shader
 const fragmentShaderSource = `
-precision mediump float;  // Використовуємо середню точність для значень з плаваючою комою
-varying vec3 fragColor;   // Отриманий колір з вершинного шейдера
-varying vec3 fragNormal;  // Нормаль для обчислення освітлення
-varying vec3 fragPosition; // Позиція для фрагментного шейдера
+precision mediump float;
 
-uniform vec3 lightPos;    // Позиція джерела світла
-uniform vec3 lightColor;  // Колір джерела світла
-uniform vec3 ambientColor; // Колір амбієнтного освітлення
-uniform vec3 cameraPos;   // Позиція камери
+varying vec3 fragColor;
+varying vec3 fragNormal;
+varying vec3 fragPosition;
+
+uniform vec3 lightPos;
+uniform vec3 lightColor;
+uniform vec3 ambientColor;
+uniform vec3 cameraPos;
 
 void main() {
-    // Нормалізація нормалей
     vec3 normal = normalize(fragNormal);
-    vec3 lightDir = normalize(lightPos - fragPosition);  // Напрямок до джерела світла
-    vec3 viewDir = normalize(cameraPos - fragPosition);  // Напрямок до камери
+    vec3 lightDir = normalize(lightPos - fragPosition);
+    vec3 viewDir = normalize(cameraPos - fragPosition);
 
-    // Розрахунок освітлення (додати ambient)
     float diffuse = max(dot(normal, lightDir), 0.0);
     vec3 diffuseColor = lightColor * diffuse;
 
-    // Амбієнтне освітлення
-    vec3 ambient = ambientColor * 0.1;
+    vec3 ambient = ambientColor * 0.2;
 
-    // Спекулярне освітлення
-    vec3 reflectDir = reflect(-lightDir, normal);  // Відбитий напрямок світла
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16.0);  // Спекулярний компонент
+    vec3 reflectDir = reflect(-lightDir, normal);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16.0);
     vec3 specularColor = lightColor * spec;
 
-    // Кольоровий результат
-    vec3 color = ambient + diffuseColor + specularColor;
-    gl_FragColor = vec4(color, 1.0);  // Встановлюємо колір пікселя
+    vec3 color = pow(ambient + diffuseColor + specularColor, vec3(1.0 / 2.2));
+    gl_FragColor = vec4(color, 1.0);
 }
 
 
-`;
 
+`;
