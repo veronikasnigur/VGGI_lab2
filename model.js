@@ -27,35 +27,36 @@ function Model(a, p, uSegments, vSegments) {
         let vSteps = this.vSegments;
         let uMin = -Math.PI, uMax = Math.PI;
         let vMin = -this.a, vMax = 0;
-
+    
         // Генерація вершин
         for (let i = 0; i <= uSteps; i++) {
             let u = uMin + (uMax - uMin) * i / uSteps;
-
+    
             for (let j = 0; j <= vSteps; j++) {
                 let v = vMin + (vMax - vMin) * j / vSteps;
                 let vertex = this.surfaceFunction(u, v);
                 vertices.push(...vertex);
+                flatNormals.push(0, 0, 0);  // Ініціалізуємо масив нормалей для кожної вершини
             }
         }
-
-        // Генерація індексів для трикутників
+    
+        // Генерація індексів для трикутників та обчислення нормалей
         for (let i = 0; i < uSteps; i++) {
             for (let j = 0; j < vSteps; j++) {
                 let idx = i * (vSteps + 1) + j;
                 let nextIdx = (i + 1) * (vSteps + 1) + j;
-
+    
                 // Перший трикутник
                 indices.push(idx, idx + 1, nextIdx);
-
+    
                 // Другий трикутник
                 indices.push(idx + 1, nextIdx + 1, nextIdx);
-
-                // Нормалі для Flat Shading
+    
+                // Обчислення нормалей для кожної вершини трикутника
                 let v0 = vertices.slice(idx * 3, idx * 3 + 3);
                 let v1 = vertices.slice((idx + 1) * 3, (idx + 1) * 3 + 3);
                 let v2 = vertices.slice(nextIdx * 3, nextIdx * 3 + 3);
-
+    
                 let edge1 = [
                     v1[0] - v0[0],
                     v1[1] - v0[1],
@@ -74,42 +75,67 @@ function Model(a, p, uSegments, vSegments) {
                 let length = Math.sqrt(
                     normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2
                 );
-
+    
                 // Додано перевірку на нульову довжину нормалі
                 if (length === 0) {
                     normal = [0, 0, 1]; // Вектор за замовчуванням (вгору)
                 } else {
                     normal = normal.map((n) => n / length); // Нормалізація
                 }
-
-                flatNormals.push(...normal, ...normal, ...normal);
+    
+                // Додаємо нормалі для кожної вершини
+                flatNormals[idx * 3] += normal[0];
+                flatNormals[idx * 3 + 1] += normal[1];
+                flatNormals[idx * 3 + 2] += normal[2];
+    
+                flatNormals[(idx + 1) * 3] += normal[0];
+                flatNormals[(idx + 1) * 3 + 1] += normal[1];
+                flatNormals[(idx + 1) * 3 + 2] += normal[2];
+    
+                flatNormals[nextIdx * 3] += normal[0];
+                flatNormals[nextIdx * 3 + 1] += normal[1];
+                flatNormals[nextIdx * 3 + 2] += normal[2];
             }
         }
-
+    
+        // Нормалізація нормалей
+        for (let i = 0; i < flatNormals.length; i += 3) {
+            let length = Math.sqrt(
+                flatNormals[i] ** 2 + flatNormals[i + 1] ** 2 + flatNormals[i + 2] ** 2
+            );
+    
+            if (length !== 0) {
+                flatNormals[i] /= length;
+                flatNormals[i + 1] /= length;
+                flatNormals[i + 2] /= length;
+            }
+        }
+    
         // Замикання по u
         for (let j = 0; j < vSteps; j++) {
             let idx1 = j;
             let idx2 = j + 1;
             let idx1LastRow = uSteps * (vSteps + 1) + j;
             let idx2LastRow = uSteps * (vSteps + 1) + j + 1;
-
+    
             indices.push(idx1, idx2, idx1LastRow);       // Трикутник для замикання
             indices.push(idx2, idx2LastRow, idx1LastRow); // Трикутник для замикання
         }
-
+    
         // Замикання по v
         for (let i = 0; i < uSteps; i++) {
             let idx1 = i * (vSteps + 1);
             let idx2 = (i + 1) * (vSteps + 1);
             let idx1LastCol = i * (vSteps + 1) + vSteps;
             let idx2LastCol = (i + 1) * (vSteps + 1) + vSteps;
-
+    
             indices.push(idx1LastCol, idx2LastCol, idx1);       // Трикутник для замикання
             indices.push(idx2LastCol, idx2, idx1); // Трикутник для замикання
         }
-
+    
         return { vertices, indices, flatNormals };
     };
+    
 
     this.BufferData = function() {
         let surfaceData = this.generateSurfaceData();
