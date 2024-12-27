@@ -1,4 +1,3 @@
-// model.js
 function Model(a, p, uSegments, vSegments) {
     this.a = a;
     this.p = p;
@@ -18,6 +17,43 @@ function Model(a, p, uSegments, vSegments) {
         return [x, y, z];
     };
 
+    // Функція для розрахунку нормалі для одного трикутника
+    this.calculateTriangleNormal = function(u1, v1, u2, v2, u3, v3) {
+        // Розрахунок трьох точок
+        let p1 = this.surfaceFunction(u1, v1);
+        let p2 = this.surfaceFunction(u2, v2);
+        let p3 = this.surfaceFunction(u3, v3);
+
+        // Розрахунок векторів двох сторін трикутника
+        let edge1 = [
+            p2[0] - p1[0],
+            p2[1] - p1[1],
+            p2[2] - p1[2]
+        ];
+        let edge2 = [
+            p3[0] - p1[0],
+            p3[1] - p1[1],
+            p3[2] - p1[2]
+        ];
+
+        // Векторний добуток для отримання нормалі трикутника
+        let normal = [
+            edge1[1] * edge2[2] - edge1[2] * edge2[1],
+            edge1[2] * edge2[0] - edge1[0] * edge2[2],
+            edge1[0] * edge2[1] - edge1[1] * edge2[0]
+        ];
+
+        // Нормалізація нормалі
+        let length = Math.sqrt(normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2);
+        if (length !== 0) {
+            normal = normal.map(n => n / length);
+        } else {
+            normal = [0, 0, 1]; // Вектор за замовчуванням
+        }
+
+        return normal;
+    };
+
     // Генерація даних для поверхні та індексів
     this.generateSurfaceData = function() {
         let vertices = [];
@@ -27,122 +63,53 @@ function Model(a, p, uSegments, vSegments) {
         let vSteps = this.vSegments;
         let uMin = -Math.PI, uMax = Math.PI;
         let vMin = -this.a, vMax = 0;
-    
-        // Генерація вершин
+
+        // Генерація вершин та нормалей
         for (let i = 0; i <= uSteps; i++) {
             let u = uMin + (uMax - uMin) * i / uSteps;
-    
+
             for (let j = 0; j <= vSteps; j++) {
                 let v = vMin + (vMax - vMin) * j / vSteps;
                 let vertex = this.surfaceFunction(u, v);
                 vertices.push(...vertex);
-                flatNormals.push(0, 0, 0);  // Ініціалізуємо масив нормалей для кожної вершини
             }
         }
-    
-        // Генерація індексів для трикутників та обчислення нормалей
+
+        // Генерація індексів для трикутників та нормалей
         for (let i = 0; i < uSteps; i++) {
             for (let j = 0; j < vSteps; j++) {
-                let idx = i * (vSteps + 1) + j;
-                let nextIdx = (i + 1) * (vSteps + 1) + j;
-    
-                // Перший трикутник
-                indices.push(idx, idx + 1, nextIdx);
-    
-                // Другий трикутник
-                indices.push(idx + 1, nextIdx + 1, nextIdx);
-    
-                // Обчислення нормалей для кожної вершини трикутника
-                let v0 = vertices.slice(idx * 3, idx * 3 + 3);
-                let v1 = vertices.slice((idx + 1) * 3, (idx + 1) * 3 + 3);
-                let v2 = vertices.slice(nextIdx * 3, nextIdx * 3 + 3);
-    
-                let edge1 = [
-                    v1[0] - v0[0],
-                    v1[1] - v0[1],
-                    v1[2] - v0[2],
-                ];
-                let edge2 = [
-                    v2[0] - v0[0],
-                    v2[1] - v0[1],
-                    v2[2] - v0[2],
-                ];
-                let normal = [
-                    edge1[1] * edge2[2] - edge1[2] * edge2[1],
-                    edge1[2] * edge2[0] - edge1[0] * edge2[2],
-                    edge1[0] * edge2[1] - edge1[1] * edge2[0],
-                ];
-                let length = Math.sqrt(
-                    normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2
+                let idx1 = i * (vSteps + 1) + j;
+                let idx2 = (i + 1) * (vSteps + 1) + j;
+                let idx3 = (i + 1) * (vSteps + 1) + j + 1;
+                let idx4 = i * (vSteps + 1) + j + 1;
+
+                // Обчислення нормалі для першого трикутника
+                let normal1 = this.calculateTriangleNormal(
+                    i * (Math.PI / uSteps), j * (this.a / vSteps),
+                    (i + 1) * (Math.PI / uSteps), j * (this.a / vSteps),
+                    (i + 1) * (Math.PI / uSteps), (j + 1) * (this.a / vSteps)
                 );
-    
-                // Додано перевірку на нульову довжину нормалі
-                if (length === 0) {
-                    normal = [0, 0, 1]; // Вектор за замовчуванням (вгору)
-                } else {
-                    normal = normal.map((n) => n / length); // Нормалізація
-                }
-    
-                // Додаємо нормалі для кожної вершини
-                flatNormals[idx * 3] += normal[0];
-                flatNormals[idx * 3 + 1] += normal[1];
-                flatNormals[idx * 3 + 2] += normal[2];
-    
-                flatNormals[(idx + 1) * 3] += normal[0];
-                flatNormals[(idx + 1) * 3 + 1] += normal[1];
-                flatNormals[(idx + 1) * 3 + 2] += normal[2];
-    
-                flatNormals[nextIdx * 3] += normal[0];
-                flatNormals[nextIdx * 3 + 1] += normal[1];
-                flatNormals[nextIdx * 3 + 2] += normal[2];
+                flatNormals.push(...normal1, ...normal1, ...normal1);
+
+                // Обчислення нормалі для другого трикутника
+                let normal2 = this.calculateTriangleNormal(
+                    i * (Math.PI / uSteps), j * (this.a / vSteps),
+                    (i + 1) * (Math.PI / uSteps), (j + 1) * (this.a / vSteps),
+                    i * (Math.PI / uSteps), (j + 1) * (this.a / vSteps)
+                );
+                flatNormals.push(...normal2, ...normal2, ...normal2);
+
+                // Додавання індексів трикутників
+                indices.push(idx1, idx2, idx4);  // Перший трикутник
+                indices.push(idx2, idx3, idx4);  // Другий трикутник
             }
         }
-    
-        // Нормалізація нормалей
-        for (let i = 0; i < flatNormals.length; i += 3) {
-            let length = Math.sqrt(
-                flatNormals[i] ** 2 + flatNormals[i + 1] ** 2 + flatNormals[i + 2] ** 2
-            );
-    
-            if (length !== 0) {
-                flatNormals[i] /= length;
-                flatNormals[i + 1] /= length;
-                flatNormals[i + 2] /= length;
-            }
-        }
-    
-        // Замикання по u
-        for (let j = 0; j < vSteps; j++) {
-            let idx1 = j;
-            let idx2 = j + 1;
-            let idx1LastRow = uSteps * (vSteps + 1) + j;
-            let idx2LastRow = uSteps * (vSteps + 1) + j + 1;
-    
-            indices.push(idx1, idx2, idx1LastRow);       // Трикутник для замикання
-            indices.push(idx2, idx2LastRow, idx1LastRow); // Трикутник для замикання
-        }
-    
-        // Замикання по v
-        for (let i = 0; i < uSteps; i++) {
-            let idx1 = i * (vSteps + 1);
-            let idx2 = (i + 1) * (vSteps + 1);
-            let idx1LastCol = i * (vSteps + 1) + vSteps;
-            let idx2LastCol = (i + 1) * (vSteps + 1) + vSteps;
-    
-            indices.push(idx1LastCol, idx2LastCol, idx1);       // Трикутник для замикання
-            indices.push(idx2LastCol, idx2, idx1); // Трикутник для замикання
-        }
-    
+
         return { vertices, indices, flatNormals };
     };
-    
 
     this.BufferData = function() {
         let surfaceData = this.generateSurfaceData();
-
-        // Діагностика: перевірка вершин і індексів
-        console.log("Vertices:", surfaceData.vertices);
-        console.log("Indices:", surfaceData.indices);
 
         // Буфер вершин
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
