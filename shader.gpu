@@ -15,22 +15,20 @@ varying vec3 fragNormal;
 varying vec3 fragPosition;
 
 void main() {
-    fragNormal = normalize(normal);
+    fragNormal = normalize(normal); // Передаємо нормаль для кожної вершини
     fragPosition = vec3(ModelViewProjectionMatrix * vec4(vertex, 1.0));
 
     gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);
 
+    // Налаштування освітлення для Flat Shading
     vec3 lightDir = normalize(lightPos - fragPosition);
     float diff = max(dot(fragNormal, lightDir), 0.0);
     vec3 diffuse = diff * lightColor;
     vec3 ambient = ambientColor;
 
-    fragColor = ambient + diffuse;
+    fragColor = ambient + diffuse;  // Можна коригувати освітлення
 }
-
 `;
-
-
 // Fragment shader
 const fragmentShaderSource = `
 precision mediump float;
@@ -45,22 +43,17 @@ uniform vec3 ambientColor;
 uniform vec3 cameraPos;
 
 void main() {
-    vec3 normal = normalize(fragNormal);
-    vec3 lightDir = normalize(lightPos - fragPosition);
-    vec3 viewDir = normalize(cameraPos - fragPosition);
+    vec3 normal = normalize(fragNormal); // Використовуємо передану нормаль
+    vec3 lightDir = normalize(lightPos - fragPosition); // Напрямок на джерело світла
 
-    float diffuse = max(dot(normal, lightDir), 0.0);
+    // Оскільки ми використовуємо Flat Shading, нормалі не інтерполюються
+    float diffuse = max(dot(normal, lightDir), 0.0); // Дифузне освітлення
     vec3 diffuseColor = lightColor * diffuse;
 
-    vec3 ambient = ambientColor * 0.2;
+    vec3 ambient = ambientColor * 0.2; // Амбієнтне освітлення
 
-    vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16.0);
-    vec3 specularColor = lightColor * spec;
-
-    vec3 color = pow(ambient + diffuseColor + specularColor, vec3(1.0 / 2.2));
+    // Остаточний колір
+    vec3 color = pow(ambient + diffuseColor, vec3(1.0 / 2.2)); // гамма корекція
     gl_FragColor = vec4(color, 1.0);
 }
-
-
 `;
